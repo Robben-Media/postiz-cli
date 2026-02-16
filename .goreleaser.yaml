@@ -1,0 +1,44 @@
+version: 2
+
+project_name: postiz-cli
+
+changelog:
+  disable: true
+
+builds:
+  - id: postiz
+    main: ./cmd/postiz
+    binary: postiz-cli
+    ldflags: >-
+      -s -w
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.version={{ .Tag }}
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.commit={{ .ShortCommit }}
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.date={{ .Date }}
+    env:
+      - CGO_ENABLED=0
+    targets:
+      - linux_amd64
+      - linux_arm64
+  - id: postiz_darwin
+    main: ./cmd/postiz
+    binary: postiz-cli
+    ldflags: >-
+      -s -w
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.version={{ .Tag }}
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.commit={{ .ShortCommit }}
+      -X github.com/builtbyrobben/postiz-cli/internal/cmd.date={{ .Date }}
+    env:
+      - CGO_ENABLED=1
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+
+archives:
+  - builds:
+      - postiz
+      - postiz_darwin
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
