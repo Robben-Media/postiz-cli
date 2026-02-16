@@ -131,8 +131,10 @@ func (c *Client) PostMultipart(ctx context.Context, path string, fieldName strin
 			return fmt.Errorf("read response body: %w", err)
 		}
 
-		if err := json.Unmarshal(respBody, result); err != nil {
-			return fmt.Errorf("decode response: %w", err)
+		if len(respBody) > 0 {
+			if err := json.Unmarshal(respBody, result); err != nil {
+				return fmt.Errorf("decode response: %w", err)
+			}
 		}
 	}
 
