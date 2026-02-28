@@ -212,3 +212,30 @@ func TestPostMultipart_Success(t *testing.T) {
 		t.Errorf("expected ID upload-1, got %s", result.ID)
 	}
 }
+
+func TestPostMultipart_EmptyBodyWithResult(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	var result struct {
+		ID string `json:"id"`
+	}
+
+	err := client.PostMultipart(
+		context.Background(),
+		"/uploads",
+		"file",
+		"empty.txt",
+		strings.NewReader("content"),
+		&result,
+	)
+	if err != nil {
+		t.Fatalf("expected no error for empty multipart response body, got %v", err)
+	}
+}
