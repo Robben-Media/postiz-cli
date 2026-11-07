@@ -96,8 +96,8 @@ func (cmd *PostsCreateCmd) Run(ctx context.Context) error {
 		}
 
 		var raw any
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return fmt.Errorf("parse JSON input: %w", err)
+		if parseErr := json.Unmarshal(data, &raw); parseErr != nil {
+			return fmt.Errorf("parse JSON input: %w", parseErr)
 		}
 
 		post, err = client.CreatePostRaw(ctx, raw)

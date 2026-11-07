@@ -112,7 +112,7 @@ func (c *Client) DeletePost(ctx context.Context, id string) error {
 }
 
 func (c *Client) UploadFile(ctx context.Context, filePath string) (*Upload, error) {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- The CLI caller explicitly selects this local upload path; it is not remote untrusted input.
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}
