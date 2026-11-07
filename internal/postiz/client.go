@@ -113,12 +113,17 @@ func (c *Client) DeletePost(ctx context.Context, id string) error {
 
 func (c *Client) UploadFile(ctx context.Context, filePath string) (*Upload, error) {
 	// The CLI caller authorizes this local path, including symlink targets.
-	// Keep the selected directory separate from its leaf name. DirFS preserves
-	// search-only directory access and intentionally follows selected symlinks;
+	// Resolve before splitting so parent symlinks followed by .. keep their
+	// filesystem meaning. DirFS preserves search-only directory access;
 	// it does not sandbox the caller's file access.
-	files := os.DirFS(filepath.Dir(filePath))
+	resolvedPath, err := filepath.EvalSymlinks(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("resolve file: %w", err)
+	}
 
-	f, err := files.Open(filepath.Base(filePath))
+	files := os.DirFS(filepath.Dir(resolvedPath))
+
+	f, err := files.Open(filepath.Base(resolvedPath))
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}

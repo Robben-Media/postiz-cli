@@ -12,7 +12,7 @@ import (
 )
 
 func TestUploadFileSelectedPath(t *testing.T) {
-	for _, name := range []string{"regular", "symlink", "search-only"} {
+	for _, name := range []string{"regular", "symlink", "search-only", "parent-symlink-dotdot"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 
@@ -27,6 +27,29 @@ func TestUploadFileSelectedPath(t *testing.T) {
 				if err := os.Symlink(target, selected); err != nil {
 					t.Fatal(err)
 				}
+			}
+
+			if name == "parent-symlink-dotdot" {
+				realDir := filepath.Join(dir, "real")
+
+				child := filepath.Join(realDir, "child")
+				if err := os.MkdirAll(child, 0o700); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.WriteFile(target, []byte("wrong media"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.WriteFile(filepath.Join(realDir, "media.txt"), []byte("selected media"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.Symlink(child, filepath.Join(dir, "parent-alias")); err != nil {
+					t.Fatal(err)
+				}
+				// Joining would clean away the filesystem-sensitive parent traversal.
+				selected = dir + "/parent-alias/../media.txt"
 			}
 
 			if name == "search-only" {
