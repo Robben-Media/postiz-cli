@@ -112,18 +112,14 @@ func (c *Client) DeletePost(ctx context.Context, id string) error {
 }
 
 func (c *Client) UploadFile(ctx context.Context, filePath string) (*Upload, error) {
-	// The CLI caller authorizes this local path, including symlink targets.
-	// Resolve before splitting so parent symlinks followed by .. keep their
-	// filesystem meaning. DirFS preserves search-only directory access;
-	// it does not sandbox the caller's file access.
-	resolvedPath, err := filepath.EvalSymlinks(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("resolve file: %w", err)
-	}
+	// The CLI caller authorizes this local path, including symlinks and streams.
+	// Split without cleaning: parent symlinks followed by .. must retain their
+	// OS meaning. The dot supports empty and drive-relative directories.
+	// DirFS intentionally preserves the caller's file access, not confinement.
+	dir, name := filepath.Split(filePath)
+	files := os.DirFS(dir + ".")
 
-	files := os.DirFS(filepath.Dir(resolvedPath))
-
-	f, err := files.Open(filepath.Base(resolvedPath))
+	f, err := files.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}
