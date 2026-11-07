@@ -13,7 +13,7 @@ import (
 )
 
 func TestUploadFileSelectedPath(t *testing.T) {
-	for _, name := range []string{"regular", "relative", "symlink", "search-only", "parent-symlink-dotdot", "pipe-descriptor"} {
+	for _, name := range []string{"regular", "non-utf8", "relative", "symlink", "search-only", "parent-symlink-dotdot", "pipe-descriptor"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 
@@ -23,6 +23,17 @@ func TestUploadFileSelectedPath(t *testing.T) {
 			}
 
 			selected := target
+
+			if name == "non-utf8" {
+				if runtime.GOOS == "windows" {
+					t.Skip("Unix filename bytes")
+				}
+
+				selected = filepath.Join(dir, "media-\xff.txt")
+				if err := os.Rename(target, selected); err != nil {
+					t.Fatal(err)
+				}
+			}
 
 			if name == "relative" {
 				t.Chdir(dir)

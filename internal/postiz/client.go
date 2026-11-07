@@ -112,14 +112,7 @@ func (c *Client) DeletePost(ctx context.Context, id string) error {
 }
 
 func (c *Client) UploadFile(ctx context.Context, filePath string) (*Upload, error) {
-	// The CLI caller authorizes this local path, including symlinks and streams.
-	// Split without cleaning: parent symlinks followed by .. must retain their
-	// OS meaning. The dot supports empty and drive-relative directories.
-	// DirFS intentionally preserves the caller's file access, not confinement.
-	dir, name := filepath.Split(filePath)
-	files := os.DirFS(dir + ".")
-
-	f, err := files.Open(name)
+	f, err := os.Open(filePath) // #nosec G304 -- The CLI caller explicitly selects this local upload path; it is not remote untrusted input.
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}
