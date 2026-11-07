@@ -2,6 +2,7 @@ package postiz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 )
 
@@ -31,6 +33,11 @@ func TestUploadFileSelectedPath(t *testing.T) {
 
 				selected = filepath.Join(dir, "media-\xff.txt")
 				if err := os.Rename(target, selected); err != nil {
+					// macOS filesystems can reject invalid UTF-8 names before upload.
+					if runtime.GOOS == "darwin" && errors.Is(err, syscall.EILSEQ) {
+						t.Skipf("filesystem rejects non-UTF-8 filename: %v", err)
+					}
+
 					t.Fatal(err)
 				}
 			}
