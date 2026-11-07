@@ -1,0 +1,87 @@
+package postiz
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestUploadFileSelectedPath(t *testing.T) {
+	for _, linked := range []bool{false, true} {
+		name := "regular"
+		if linked {
+			name = "symlink"
+		}
+
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+
+			target := filepath.Join(dir, "media.txt")
+			if err := os.WriteFile(target, []byte("selected media"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			selected := target
+			if linked {
+				selected = filepath.Join(t.TempDir(), "alias.txt")
+				if err := os.Symlink(target, selected); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != "/uploads" {
+					t.Errorf("request = %s %s", r.Method, r.URL.Path)
+				}
+
+				if r.Header.Get("Authorization") != "Bearer test-key" {
+					t.Error("missing upload credentials")
+				}
+
+				f, header, err := r.FormFile("file")
+				if err != nil {
+					t.Error(err)
+					http.Error(w, "invalid multipart", http.StatusBadRequest)
+
+					return
+				}
+				defer f.Close()
+
+				content, err := io.ReadAll(f)
+				if err != nil {
+					t.Error(err)
+				}
+
+				if string(content) != "selected media" || header.Filename != filepath.Base(selected) {
+					t.Errorf("uploaded %q as %q", content, header.Filename)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, `{"id":"uploaded","url":"https://example.test/media"}`)
+			}))
+			defer server.Close()
+
+			t.Setenv("POSTIZ_BASE_URL", server.URL)
+
+			got, err := NewClient("test-key").UploadFile(context.Background(), selected)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got.ID != "uploaded" {
+				t.Fatalf("upload = %#v", got)
+			}
+		})
+	}
+}
+
+func TestUploadFileMissing(t *testing.T) {
+	got, err := NewClient("test-key").UploadFile(context.Background(), filepath.Join(t.TempDir(), "missing"))
+	if err == nil || got != nil {
+		t.Fatalf("missing file = %v, %v", got, err)
+	}
+}

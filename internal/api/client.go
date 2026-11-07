@@ -95,12 +95,12 @@ func (c *Client) PostMultipart(ctx context.Context, path string, fieldName strin
 		return fmt.Errorf("create form file: %w", err)
 	}
 
-	if _, err := io.Copy(part, fileReader); err != nil {
-		return fmt.Errorf("copy file data: %w", err)
+	if _, copyErr := io.Copy(part, fileReader); copyErr != nil {
+		return fmt.Errorf("copy file data: %w", copyErr)
 	}
 
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("close multipart writer: %w", err)
+	if closeErr := writer.Close(); closeErr != nil {
+		return fmt.Errorf("close multipart writer: %w", closeErr)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, body)

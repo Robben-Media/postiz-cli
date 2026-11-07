@@ -112,7 +112,21 @@ func (c *Client) DeletePost(ctx context.Context, id string) error {
 }
 
 func (c *Client) UploadFile(ctx context.Context, filePath string) (*Upload, error) {
-	f, err := os.Open(filePath)
+	// The CLI caller explicitly selects a local file, including symlinks.
+	// Resolve that selection, then anchor the open in its target directory so
+	// a replaced final symlink cannot redirect the read outside that directory.
+	resolvedPath, err := filepath.EvalSymlinks(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("resolve file: %w", err)
+	}
+
+	root, err := os.OpenRoot(filepath.Dir(resolvedPath))
+	if err != nil {
+		return nil, fmt.Errorf("open file directory: %w", err)
+	}
+	defer root.Close()
+
+	f, err := root.Open(filepath.Base(resolvedPath))
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
 	}
