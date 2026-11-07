@@ -7,16 +7,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestUploadFileSelectedPath(t *testing.T) {
-	for _, linked := range []bool{false, true} {
-		name := "regular"
-		if linked {
-			name = "symlink"
-		}
-
+	for _, name := range []string{"regular", "symlink", "search-only"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 
@@ -26,9 +22,25 @@ func TestUploadFileSelectedPath(t *testing.T) {
 			}
 
 			selected := target
-			if linked {
+			if name == "symlink" {
 				selected = filepath.Join(t.TempDir(), "alias.txt")
 				if err := os.Symlink(target, selected); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if name == "search-only" {
+				if runtime.GOOS == "windows" {
+					t.Skip("Unix directory permissions")
+				}
+
+				if os.Geteuid() == 0 {
+					t.Skip("root bypasses directory permissions")
+				}
+
+				t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+				if err := os.Chmod(dir, 0o100); err != nil {
 					t.Fatal(err)
 				}
 			}
